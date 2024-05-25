@@ -1,13 +1,14 @@
 "use client";
-
+import {ReactQueryStreamedHydration } from "@tanstack/react-query-next-experimental"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { loggerLink, unstable_httpBatchStreamLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
 import { type inferRouterInputs, type inferRouterOutputs } from "@trpc/server";
-import { useState } from "react";
+import { use, useState } from "react";
 import SuperJSON from "superjson";
 
 import { type AppRouter } from "~/server/api/root";
+import { useSSROnlySecret } from "ssr-only-secrets";
 
 const createQueryClient = () => new QueryClient();
 
@@ -37,8 +38,10 @@ export type RouterInputs = inferRouterInputs<AppRouter>;
  */
 export type RouterOutputs = inferRouterOutputs<AppRouter>;
 
-export function TRPCReactProvider(props: { children: React.ReactNode }) {
+export function TRPCReactProvider(props: { children: React.ReactNode, cookiePromise: Promise<string> }) {
   const queryClient = getQueryClient();
+
+  const cookies = useSSROnlySecret(use(props.cookiePromise),"SECRET_KEY_VAR");
 
   const [trpcClient] = useState(() =>
     api.createClient({
@@ -51,9 +54,12 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
         unstable_httpBatchStreamLink({
           transformer: SuperJSON,
           url: getBaseUrl() + "/api/trpc",
-          headers: () => {
+          headers: async () => {
             const headers = new Headers();
             headers.set("x-trpc-source", "nextjs-react");
+            if (cookies) {
+            headers.set("cookie", cookies);
+          }
             return headers;
           },
         }),
@@ -63,9 +69,10 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <ReactQueryStreamedHydration>
       <api.Provider client={trpcClient} queryClient={queryClient}>
         {props.children}
-      </api.Provider>
+      </api.Provider></ReactQueryStreamedHydration>
     </QueryClientProvider>
   );
 }

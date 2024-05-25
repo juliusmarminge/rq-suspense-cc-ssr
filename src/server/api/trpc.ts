@@ -26,7 +26,6 @@ import { getServerAuthSession } from "~/server/auth";
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
   const session = await getServerAuthSession();
-
   return {
     session,
     ...opts,
@@ -93,6 +92,7 @@ export const publicProcedure = t.procedure;
  * @see https://trpc.io/docs/procedures
  */
 export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+  console.log("TRPC PROTECTED PROCEDURE", ctx.session)
   if (!ctx.session || !ctx.session.user) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }

@@ -1,8 +1,10 @@
 import "~/styles/globals.css";
 
 import { GeistSans } from "geist/font/sans";
+import { cloakSSROnlySecret } from "ssr-only-secrets";
 
 import { TRPCReactProvider } from "~/trpc/react";
+import { cookies } from "next/headers";
 
 export const metadata = {
   title: "Create T3 App",
@@ -10,15 +12,18 @@ export const metadata = {
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const encryptedCookiePromise = Promise.resolve(cookies()).then((cookies) => {
+    return cloakSSROnlySecret(cookies.toString(), "SECRET_KEY_VAR");
+  })
   return (
     <html lang="en">
       <body className={GeistSans.className}>
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <TRPCReactProvider cookiePromise={encryptedCookiePromise}>{children}</TRPCReactProvider>
       </body>
     </html>
   );

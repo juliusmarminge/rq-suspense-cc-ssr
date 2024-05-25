@@ -30,8 +30,8 @@ export const postRouter = createTRPCRouter({
       return post;
     }),
 
-  getLatest: protectedProcedure.query(() => {
-    return post;
+  getLatest: protectedProcedure.query((opts) => {
+    return opts.ctx.session
   }),
 
   getSecretMessage: protectedProcedure.query(() => {
